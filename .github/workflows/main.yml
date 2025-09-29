@@ -34,8 +34,8 @@ jobs:
           set -euo pipefail
           cd "$ROBOT_DIR"
           # ZIP contains only the three files at the ZIP root
-          zip -9 -r "../$ZIP_NAME" conda.yaml robot.yaml tasks.py
-          ls -lh "../$ZIP_NAME"
+          zip -9 -r "$ZIP_NAME" conda.yaml robot.yaml tasks.py
+          ls -lh "$ZIP_NAME"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
