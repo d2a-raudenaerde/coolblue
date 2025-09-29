@@ -1,0 +1,64 @@
+name: Build robot ZIP
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-zip:
+    runs-on: ubuntu-latest
+    env:
+      # If your robot lives in a subfolder, change this to e.g. "robot"
+      ROBOT_DIR: "."
+      ZIP_NAME: "robot.zip"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required files exist
+        run: |
+          set -euo pipefail
+          cd "$ROBOT_DIR"
+          for f in conda.yaml robot.yaml tasks.py; do
+            if [ ! -f "$f" ]; then
+              echo "::error file=$f::Missing required file '$f' in $ROBOT_DIR"
+              exit 1
+            fi
+          done
+
+      - name: Create ZIP
+        run: |
+          set -euo pipefail
+          cd "$ROBOT_DIR"
+          # ZIP contains only the three files at the ZIP root
+          zip -9 -r "../$ZIP_NAME" conda.yaml robot.yaml tasks.py
+          ls -lh "../$ZIP_NAME"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-zip
+          path: ${{ env.ZIP_NAME }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: build-zip
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: robot-zip
+          path: .
+
+      - name: Create GitHub Release and upload ZIP
+        uses: softprops/action-gh-release@v2
+        with:
+          files: robot.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
